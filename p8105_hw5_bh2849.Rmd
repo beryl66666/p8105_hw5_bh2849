@@ -97,6 +97,7 @@ tidy_df %>%
 
 This plot suggests high within-subject correlation -- subjects who start above average end up above average, and those that start below average end up below average. Subjects in the control group generally don't change over time, but those in the experiment group increase their outcome in a roughly linear way. 
 
+
 ## Problem 2 
 
 ```{r}
@@ -123,12 +124,57 @@ In the `homicides` dataset, there are `r nrow(homicides)` observations and `r nc
 #### Estimate the Proportion of Unsolved Homicides in Baltimore, MD
 
 ```{r}
-prop.test(summarize_homicide %>% filter(city_state == "Baltimore.MD") %>%
-            pull(unsolved_homicide), 
-          summarize_homicide %>% filter(city_state == "Baltimore.MD") %>%
-            pull(total_homicide)) %>% 
-  broom::tidy()
+baltimore_data_df = 
+  homicide_data %>%
+  filter(city_state == "Baltimore,MD")
+
+baltimore_summary = 
+  baltimore_data_df %>%
+  summarize(
+    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
+    total = n())
+
+baltimore_test = 
+  prop.test(
+    x = baltimore_summary %>% pull(unsolved),
+    n = baltimore_summary %>% pull(total)) %>%
+  broom::tidy() %>%
+  select(estimate, conf.low, conf.high)
+
+baltimore_test
 ```
+
+#### Proportion of Unsolved Homicides and the CI for Each City 
+
+```{r}
+cities_test = summarize_homicide %>% 
+  mutate(test = map2(unsolved_homicide,total_homicide, prop.test),
+         tidy = map(test, broom::tidy)) %>% 
+  select(-test) %>% 
+  unnest(tidy) %>% 
+  select(city_state, estimate, conf.low, conf.high)
+  
+cities_test
+```
+
+#### Plot showing the Estimates and CIs for Each City 
+
+```{r}
+all_plot = cities_test %>%
+  mutate(city_state = fct_reorder(city_state, estimate)) %>%
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  theme(axis.text.x = element_text(angle = 60, vjust = 0.5, hjust = 1)) +
+  labs(x = "City, State", 
+       y = "Estimate",
+       title = "Estimated Proportion and CIs of Unsolved Homicides")
+
+all_plot
+```
+
+
+## Problem 3 
 
 
 
