@@ -99,5 +99,36 @@ This plot suggests high within-subject correlation -- subjects who start above a
 
 ## Problem 2 
 
+```{r}
+homicides = read_csv("./data/homicide-data.csv")
+```
+
+#### Describe the Raw Data 
+
+```{r}
+homicide_data = homicides %>% 
+  janitor::clean_names() %>% 
+  mutate(city_state = str_c(city, state, sep = ",")) 
+
+summarize_homicide = homicide_data %>% 
+  group_by(city_state) %>% 
+  summarise(total_homicide = n(), 
+            unsolved_homicide = sum(disposition %in% c("Closed without arrest", "Open/No arrest")))
+
+summarize_homicide 
+```
+
+In the `homicides` dataset, there are `r nrow(homicides)` observations and `r ncol(homicides)` variables including `r colnames(homicides)`. 
+
+#### Estimate the Proportion of Unsolved Homicides in Baltimore, MD
+
+```{r}
+prop.test(summarize_homicide %>% filter(city_state == "Baltimore.MD") %>%
+            pull(unsolved_homicide), 
+          summarize_homicide %>% filter(city_state == "Baltimore.MD") %>%
+            pull(total_homicide)) %>% 
+  broom::tidy()
+```
+
 
 
